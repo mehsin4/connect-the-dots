@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connect the Dots</title>
+<style>
+  :root{
+    --bg: #EDECEA;
+    --ink: #1A1A1A;
+    --line: #9A9A9A;
+    --yellow: #F0C24B;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    margin:0; padding:0;
+    height: 100vh;
+    height: 100dvh;
+    background: var(--bg);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  .page{
+    height: 100vh;
+    height: 100dvh;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 14px 24px 12px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+  .canvas-wrap{
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    max-width: 940px;
+    margin: 0 auto;
+    cursor: none;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  svg#board{ width: 100%; height: 100%; display:block; }
+
+  .hint{
+    flex: 0 0 auto;
+    text-align:center;
+    color: #A9A79F;
+    font-size: 14px;
+    margin: 0 0 4px;
+    height: 18px;
+    transition: opacity 0.4s ease;
+  }
+  .hint.hidden{ opacity: 0; }
+
+  .dot-num{
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 14px;
+    fill: var(--ink);
+    pointer-events: none;
+  }
+  .dot-circle{
+    fill: var(--ink);
+    transition: fill 0.2s ease;
+  }
+  .dot-circle.visited{
+    fill: var(--yellow);
+  }
+
+  .stroke-path{
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .live-path{
+    fill: none;
+    stroke: var(--line);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.85;
+  }
+
+  #link-layer{
+    transition: opacity 0.9s ease;
+  }
+  #link-layer.fade-out{
+    opacity: 0;
+  }
+
+  .reveal-group{
+    opacity: 0;
+    transform: scale(0.88);
+    transition: opacity 0.9s ease, transform 0.9s cubic-bezier(.2,1.4,.4,1);
+  }
+  .reveal-group.show{ opacity: 1; transform: scale(1); }
+
+  .pencil-cursor{
+    position: absolute;
+    width: 34px; height: 34px;
+    left: 0; top: 0;
+    pointer-events: none;
+    transform: translate(-1px, -31px);
+    z-index: 20;
+    display: none;
+  }
+  .pencil-cursor svg{ width: 100%; height: 100%; display: block; }
+  .canvas-wrap:hover .pencil-cursor,
+  .canvas-wrap.touching .pencil-cursor{ display: block; }
+
+  .footer{
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    gap: 12px;
+  }
+  .controls{
+    text-align: left;
+    font-size: 17px;
+  }
+  .controls button{
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    font-weight: 500;
+    background: none;
+    border: none;
+    color: var(--ink);
+    cursor: pointer;
+    padding: 4px 14px 4px 0;
+  }
+  .controls button:hover{ text-decoration: underline; }
+  .controls .divider{ color: #C7C5BE; }
+
+  .credit{
+    text-align: right;
+    margin: 0;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .credit a{
+    color: #ABA9A2;
+    text-decoration: none;
+  }
+  .credit a:hover{ text-decoration: underline; }
+
+  @media (max-width: 560px){
+    .page{ padding: 24px 14px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <p class="hint" id="hint">Drag from the yellow dot to the next number</p>
+
+  <div class="canvas-wrap" id="wrap">
+    <svg id="board" viewBox="0 0 940 640" xmlns="http://www.w3.org/2000/svg">
+      <g id="reveal-group" class="reveal-group"></g>
+      <g id="link-layer"></g>
+      <path id="live-path" class="live-path" d=""></path>
+      <g id="dot-layer"></g>
+      <g id="confetti-layer"></g>
+    </svg>
+
+    <svg class="pencil-cursor" id="pencilCursor" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+      <path d="M70 335L15 499.5L175.5 443.5L508 107L406 4.5L70 335Z" fill="#EDECEA"/>
+      <path d="M500.344 75.4905L436.566 11.7147H436.565C420.942 -3.90475 395.527 -3.90375 379.907 11.7147L59.2861 332.327C58.2171 333.397 57.4031 334.696 56.9081 336.126L0.59912 498.728C-0.654836 502.346 0.269131 506.363 2.97704 509.071C5.69094 511.792 9.7408 512.697 13.3207 511.449L175.924 455.139C177.354 454.643 178.653 453.83 179.723 452.761L500.344 132.148C515.822 117.313 515.823 90.3269 500.344 75.4905ZM415.491 188.715L346.38 119.604C346.377 119.601 346.373 119.597 346.37 119.594L323.34 96.5637L344.552 75.3525L436.704 167.503L415.491 188.715ZM179.407 424.793L174.97 397.297L385.379 186.889L401.348 202.858L179.407 424.793ZM309.197 110.706L325.162 126.671L114.753 337.078L87.2561 332.641L309.197 110.706ZM339.304 140.812L371.238 172.746L160.265 383.72L129.227 382.823L128.33 351.787L339.304 140.812ZM73.0576 350.609L108.452 356.32L109.508 392.834C109.661 398.13 113.919 402.388 119.215 402.541L155.731 403.597L161.441 438.991L82.3292 466.388C78.8644 458.249 73.8035 450.734 67.5608 444.491C61.316 438.247 53.8002 433.186 45.6615 429.722L73.0576 350.609ZM39.0938 448.681C49.7584 453.537 58.5111 462.287 63.3669 472.952L26.2352 485.811L39.0938 448.681ZM486.201 118.007L450.845 153.362L358.694 61.211L394.048 25.8572C401.871 18.0335 414.603 18.0365 422.423 25.8572L486.201 89.633C493.924 97.0247 493.922 110.615 486.201 118.007Z" fill="#1A1A1A"/>
+    </svg>
+  </div>
+
+  <div class="footer">
+    <div class="controls">
+      <button id="restart">Reset</button>
+      <span class="divider">&nbsp;&nbsp;</span>
+      <button id="newPuzzle">New Puzzle</button>
+    </div>
+    <p class="credit"><a href="https://mehakux.framer.website/" target="_blank" rel="noopener">By Mehak Singhal</a></p>
+  </div>
+</div>
+
+<script>
+(function(){
+  const svgNS = "http://www.w3.org/2000/svg";
+
+  // ---- Puzzle definitions: flower silhouettes traced by evenly-spaced,
+  // radius-modulated points (a cosine ripple per petal), with a touch of
+  // deterministic jitter so the outline doesn't look mechanically perfect. --
+
+  function seededJitter(i, amount){
+    const s = Math.sin(i * 12.9898 + 3.1) * 43758.5453;
+    return ((s - Math.floor(s)) - 0.5) * 2 * amount;
+  }
+
+  function flowerPoints(cx, cy, count, petals, baseR, amp, phase, jitter){
+    const pts = [];
+    for (let i = 0; i < count; i++){
+      const theta = phase + (i / count) * Math.PI * 2;
+      const r = baseR + amp * Math.cos(petals * theta) + seededJitter(i, jitter || 0);
+      pts.push({
+        n: i + 1,
+        x: cx + Math.cos(theta) * r,
+        y: cy + Math.sin(theta) * r
+      });
+    }
+    return pts;
+  }
+
+  const puzzles = [
+    { id: 'rose',       cx: 470, cy: 320, dots: flowerPoints(470, 320, 26, 6,  190, 95,  0,             4), fill: '#E8547A' },
+    { id: 'sunflower',  cx: 470, cy: 320, dots: flowerPoints(470, 320, 32, 10, 210, 70,  Math.PI / 10,  4), fill: '#F4B942' },
+    { id: 'daisy',      cx: 470, cy: 320, dots: flowerPoints(470, 320, 34, 14, 195, 55,  0,             3), fill: '#FBF7E8' },
+    { id: 'tulip',      cx: 470, cy: 320, dots: flowerPoints(470, 320, 25, 5,  185, 110, Math.PI / 8,   4), fill: '#C2437A' },
+    { id: 'lavender',   cx: 470, cy: 320, dots: flowerPoints(470, 320, 28, 8,  175, 60,  Math.PI / 6,   3), fill: '#9B87C4' },
+    { id: 'poppy',      cx: 470, cy: 320, dots: flowerPoints(470, 320, 22, 4,  200, 130, 0,             5), fill: '#E14B3D' },
+    { id: 'marigold',   cx: 470, cy: 320, dots: flowerPoints(470, 320, 36, 12, 205, 65,  Math.PI / 14,  3), fill: '#F2994A' },
+    { id: 'cherry',     cx: 470, cy: 320, dots: flowerPoints(470, 320, 20, 5,  160, 90,  Math.PI / 5,   4), fill: '#F2A9C7' },
+    { id: 'orchid',     cx: 470, cy: 320, dots: flowerPoints(470, 320, 21, 3,  190, 140, Math.PI / 9,   5), fill: '#B15FA8' },
+    { id: 'hibiscus',   cx: 470, cy: 320, dots: flowerPoints(470, 320, 30, 5,  215, 100, 0,             4), fill: '#E8384F' },
+    { id: 'carnation',  cx: 470, cy: 320, dots: flowerPoints(470, 320, 38, 16, 200, 45,  Math.PI / 16,  2), fill: '#F4C2D7' },
+    { id: 'lotus',      cx: 470, cy: 320, dots: flowerPoints(470, 320, 40, 8,  220, 75,  Math.PI / 7,   3), fill: '#F7B7C8' }
+  ];
+
+  // ---- Session shuffle bag: every puzzle is shown once before any repeats,
+  // and the game always opens on a random one. ---------------------------
+
+  function shuffledIndices(n){
+    const arr = Array.from({ length: n }, (_, i) => i);
+    for (let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  let puzzleOrder = shuffledIndices(puzzles.length);
+  let orderPos = 0;
+
+  function nextPuzzleIndex(){
+    if (orderPos >= puzzleOrder.length){
+      const lastShown = puzzleOrder[puzzleOrder.length - 1];
+      let reshuffled = shuffledIndices(puzzles.length);
+      if (reshuffled[0] === lastShown && reshuffled.length > 1){
+        [reshuffled[0], reshuffled[1]] = [reshuffled[1], reshuffled[0]];
+      }
+      puzzleOrder = reshuffled;
+      orderPos = 0;
+    }
+    const idx = puzzleOrder[orderPos];
+    orderPos++;
+    return idx;
+  }
+
+  let puzzleIndex = nextPuzzleIndex();
+
+  // ---- DOM refs -------------------------------------------------------------
+  const dotLayer = document.getElementById('dot-layer');
+  const linkLayer = document.getElementById('link-layer');
+  const livePath = document.getElementById('live-path');
+  const revealGroup = document.getElementById('reveal-group');
+  const confettiLayer = document.getElementById('confetti-layer');
+  const wrap = document.getElementById('wrap');
+  const board = document.getElementById('board');
+  const cursor = document.getElementById('pencilCursor');
+  const restartBtn = document.getElementById('restart');
+  const newPuzzleBtn = document.getElementById('newPuzzle');
+  const hint = document.getElementById('hint');
+
+  let dots = [];
+  let dotEls = [];
+  let nextIndex = 1;      // dots are 1-indexed by .n; next required dot number
+  let lastPoint = null;   // {x,y} of last completed dot
+  let dragging = false;
+  let strokePts = [];
+  let hintShown = true;
+
+  const SNAP_RADIUS = 26;
+  const START_RADIUS = 46;
+  const CONFETTI_COLORS = ['#E8547A', '#F4B942', '#6FA8DC', '#8FBF6A', '#D97757', '#B084CC'];
+
+  function smoothClosedPath(pts){
+    const n = pts.length;
+    let d = `M ${pts[0].x} ${pts[0].y} `;
+    for (let i = 0; i < n; i++){
+      const p0 = pts[(i - 1 + n) % n];
+      const p1 = pts[i];
+      const p2 = pts[(i + 1) % n];
+      const p3 = pts[(i + 2) % n];
+      const c1x = p1.x + (p2.x - p0.x) / 6;
+      const c1y = p1.y + (p2.y - p0.y) / 6;
+      const c2x = p2.x - (p3.x - p1.x) / 6;
+      const c2y = p2.y - (p3.y - p1.y) / 6;
+      d += `C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y} `;
+    }
+    return d + 'Z';
+  }
+
+  function buildDots(){
+    dotLayer.innerHTML = '';
+    dotEls = [];
+    dots.forEach(d => {
+      const g = document.createElementNS(svgNS, 'g');
+
+      const circle = document.createElementNS(svgNS, 'circle');
+      circle.classList.add('dot-circle');
+      circle.setAttribute('cx', d.x);
+      circle.setAttribute('cy', d.y);
+      circle.setAttribute('r', 7);
+
+      const label = document.createElementNS(svgNS, 'text');
+      label.classList.add('dot-num');
+      label.setAttribute('x', d.x + 12);
+      label.setAttribute('y', d.y - 9);
+      label.textContent = d.n;
+
+      g.appendChild(circle);
+      g.appendChild(label);
+      dotLayer.appendChild(g);
+      dotEls.push({ circle, data: d });
+    });
+    dotEls[0].circle.classList.add('visited');
+  }
+
+  function loadPuzzle(idx){
+    const puzzle = puzzles[idx];
+    dots = puzzle.dots;
+    nextIndex = 2;
+    lastPoint = { x: dots[0].x, y: dots[0].y };
+    dragging = false;
+    strokePts = [];
+    linkLayer.innerHTML = '';
+    linkLayer.classList.remove('fade-out');
+    linkLayer.style.opacity = '';
+    livePath.setAttribute('d', '');
+    revealGroup.classList.remove('show');
+    revealGroup.innerHTML = '';
+    revealGroup.style.transformOrigin = `${puzzle.cx}px ${puzzle.cy}px`;
+    confettiLayer.innerHTML = '';
+    buildDots();
+    hint.classList.remove('hidden');
+    hintShown = true;
+  }
+
+  function dotByNumber(n){ return dots.find(d => d.n === n); }
+  function dotElByNumber(n){ return dotEls.find(el => el.data.n === n); }
+
+  function finalizeSegment(toDot){
+    strokePts.push({ x: toDot.x, y: toDot.y });
+    const path = document.createElementNS(svgNS, 'path');
+    path.classList.add('stroke-path');
+    let d = `M ${strokePts[0].x} ${strokePts[0].y} `;
+    for (let i = 1; i < strokePts.length; i++) d += `L ${strokePts[i].x} ${strokePts[i].y} `;
+    path.setAttribute('d', d);
+    linkLayer.appendChild(path);
+
+    dotElByNumber(toDot.n).circle.classList.add('visited');
+    lastPoint = { x: toDot.x, y: toDot.y };
+    strokePts = [lastPoint];
+    nextIndex++;
+
+    if (hintShown){ hint.classList.add('hidden'); hintShown = false; }
+
+    if (nextIndex > dots.length){
+      dragging = false;
+      livePath.setAttribute('d', '');
+      setTimeout(finishPuzzle, 250);
+      return true;
+    }
+    return false;
+  }
+
+  function finishPuzzle(){
+    const puzzle = puzzles[puzzleIndex];
+
+    // build the reveal: the same connected shape, now filled with colour
+    const d = smoothClosedPath(dots);
+    const shape = document.createElementNS(svgNS, 'path');
+    shape.setAttribute('d', d);
+    shape.setAttribute('fill', puzzle.fill);
+    revealGroup.innerHTML = '';
+    revealGroup.appendChild(shape);
+
+    burstConfetti(puzzle.cx, puzzle.cy);
+
+    // the drawn outline fades away as the coloured flower fades in beneath it
+    linkLayer.classList.add('fade-out');
+    revealGroup.classList.add('show');
+  }
+
+  function burstConfetti(cx, cy){
+    const count = 70;
+    for (let i = 0; i < count; i++){
+      const angle = Math.random() * Math.PI * 2;
+      const distance = 160 + Math.random() * 340;
+      const dx = Math.cos(angle) * distance;
+      const dy = Math.sin(angle) * distance;
+      const size = 3 + Math.random() * 5;
+      const color = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+      const shape = document.createElementNS(svgNS, Math.random() < 0.5 ? 'circle' : 'rect');
+      if (shape.tagName === 'circle'){
+        shape.setAttribute('cx', cx);
+        shape.setAttribute('cy', cy);
+        shape.setAttribute('r', size / 2);
+      } else {
+        shape.setAttribute('x', cx - size / 2);
+        shape.setAttribute('y', cy - size / 2);
+        shape.setAttribute('width', size);
+        shape.setAttribute('height', size);
+      }
+      shape.setAttribute('fill', color);
+      shape.style.opacity = '1';
+      shape.style.transformBox = 'fill-box';
+      shape.style.transformOrigin = 'center';
+      shape.style.transition = `transform ${0.9 + Math.random() * 0.5}s cubic-bezier(.15,.7,.3,1), opacity ${1.1 + Math.random() * 0.4}s ease-in`;
+      confettiLayer.appendChild(shape);
+
+      requestAnimationFrame(() => {
+        shape.style.transform = `translate(${dx}px, ${dy}px) rotate(${(Math.random() * 720 - 360).toFixed(0)}deg)`;
+        shape.style.opacity = '0';
+      });
+
+      setTimeout(() => shape.remove(), 1800);
+    }
+  }
+
+  function svgPoint(evt){
+    const pt = board.createSVGPoint();
+    pt.x = evt.clientX; pt.y = evt.clientY;
+    const ctm = board.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
+    const loc = pt.matrixTransform(ctm.inverse());
+    return { x: loc.x, y: loc.y };
+  }
+
+  function dist(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
+
+  wrap.addEventListener('pointerdown', (e) => {
+    if (nextIndex > dots.length) return;
+    e.preventDefault();
+    const p = svgPoint(e);
+    if (dist(p, lastPoint) <= START_RADIUS){
+      dragging = true;
+      strokePts = [lastPoint];
+      wrap.setPointerCapture(e.pointerId);
+    }
+  }, { passive: false });
+
+  wrap.addEventListener('pointermove', (e) => {
+    if (dragging) e.preventDefault();
+    const rect = wrap.getBoundingClientRect();
+    cursor.style.left = (e.clientX - rect.left) + 'px';
+    cursor.style.top = (e.clientY - rect.top) + 'px';
+
+    if (!dragging || nextIndex > dots.length) return;
+    const p = svgPoint(e);
+    const last = strokePts[strokePts.length - 1];
+    if (dist(p, last) > 3) strokePts.push(p);
+
+    let d = `M ${strokePts[0].x} ${strokePts[0].y} `;
+    for (let i = 1; i < strokePts.length; i++) d += `L ${strokePts[i].x} ${strokePts[i].y} `;
+    livePath.setAttribute('d', d);
+
+    const target = dotByNumber(nextIndex);
+    if (target && dist(p, target) <= SNAP_RADIUS){
+      const done = finalizeSegment(target);
+      if (!done){
+        livePath.setAttribute('d', `M ${lastPoint.x} ${lastPoint.y}`);
+      }
+    }
+  }, { passive: false });
+
+  function endDrag(){
+    dragging = false;
+    livePath.setAttribute('d', '');
+    strokePts = [];
+  }
+  wrap.addEventListener('pointerup', endDrag);
+  wrap.addEventListener('pointercancel', endDrag);
+  wrap.addEventListener('pointerenter', () => wrap.classList.add('touching'));
+  wrap.addEventListener('pointerleave', () => wrap.classList.remove('touching'));
+  wrap.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  restartBtn.addEventListener('click', () => loadPuzzle(puzzleIndex));
+  newPuzzleBtn.addEventListener('click', () => {
+    puzzleIndex = nextPuzzleIndex();
+    loadPuzzle(puzzleIndex);
+  });
+
+  loadPuzzle(puzzleIndex);
+})();
+</script>
+</body>
+</html>
